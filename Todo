@@ -1,0 +1,318 @@
+
+
+
+    · allow optional namespacing of action sets.
+
+    · switchable i18n message for easier defaults
+
+        [   'reui.default',
+            [   'reui.somewidget.greeting',
+                'Hello, [_1]!',
+            ],
+            'username',
+        ];
+
+        tries:
+            ['reui.somewidget.greeting', 'username']
+        if in eq out:
+            ['Hello, [_1]!', 'username']
+        if in ne out:
+            return 'Hello, username!';
+
+        language aware:
+
+        [   'reui.default',
+            [   'reui.somewidget.greeting',
+                {   en => 'Hello, [_1]!',
+                    de => 'Hallo, [_1]!',
+                },
+            ],
+            'username',
+        ];
+
+    · ajax view
+
+        my $aj = View::Ajax->new(
+            engine  => 'jQuery',
+            path    => '/jquery.something.js',
+        );
+
+    · refactor type system, grown too organically
+
+    · sections
+
+        my $section = Section->new(
+            title   => 'Test Title',
+            widgets => [
+                SomeContent->new,
+            ],
+        );
+
+    · documentation
+
+        ReUI
+            Manual
+                Intro
+                Intro::Usage
+                Intro::Widgets
+                Intro::I18N
+                Intro::Skins
+                Intro::Forms
+
+    · javascript
+
+        # http://localhost/same/resource?__reui.ajax=1
+
+        # content responses will be collected in the event and returned
+        # in the response object
+        my $ajax = $state->fire(Event::AJAX->new(...));
+
+        ReUI
+            Widget
+                Ajax
+                    Update
+                        Interval
+
+    · controls
+        *localised parsing/formatting
+
+        Widget
+            Section
+            Dialog
+            Message
+            Control
+                Action
+                    Set
+                Set
+                Value
+                    Numeric*
+                    DateTime*
+                    Date*
+                    Time*
+                Checkbox
+                Select
+                Group
+                    Radio
+                    Checkbox
+
+
+    · allow i18n library to render widgets
+
+        'Logged in as [render,_1] · [render,_2,text,Logout]'
+
+    · add current uri to request expectations
+
+    · file uploads
+
+    · extended distributions
+
+
+        [ReUI-Widget-Account]
+
+            my $login = ReUI::Widget::Account::Login->new(
+                username_arguments => {
+                    label => 'EMail',
+                },
+                password_arguments => {
+                    label => 'Password',
+                },
+                remember_me_arguments => {
+                    show => 1,
+                },
+                forgot_password_arguments => {
+                    uri  => $uri,
+                    text => 'Forgot your password?',
+                },
+                login_action_arguments => {
+                    label => 'Sign In',
+                },
+            );
+            $login->add_constraint('myapp.login.invalid', fun ($result) {
+                $ctx->authenticate({
+                    username => $result->{username},
+                    password => $result->{password},
+                });
+                return $ctx->user_exists;
+            });
+            $state->on_success($login->login_action, fun ($result) {
+                $ctx->res->redirect(...);
+            });
+
+            ReUI
+                Widget
+                    Account
+                        Registration
+                        Login
+                        Logout
+                        Profile
+                        ChangePassword
+                    QuickBox
+                        Account
+                            Status
+                            Login
+
+
+        [ReUI-Widget-Control-Action-Trait-DBIC]
+
+            my $submit = Submit->new(
+                traits    => [qw( DBIC::Create )],
+                resultset => $rs,
+                transform => fun ($result) { ... },
+            );
+
+            ReUI
+                Widget
+                    Control
+                        Action
+                            Trait
+                                DBIC
+                                    Create
+                                    Update
+                                    Delete
+
+
+        [ReUI-Widget-Search]
+
+            my $search = ReUI::Widget::Search::Simple->new(
+                search_action_arguments => {
+                    label => 'Go!',
+                },
+                controls => {
+                    Checkbox->new(name => 'case_sensitive'),
+                },
+            );
+            $state->on_success($search->search_action, fun ($result) {
+                $_->variables_for($list_widget)->{query} = $result->{query};
+            });
+
+            ReUI
+                Widget
+                    Search
+                        Simple
+                        Advanced
+                    QuickBox
+                        Search
+
+
+        [ReUI-Widget-Comment]
+
+            ReUI
+                Widget
+                    Comment
+                        Tree
+                        Post
+                    Dialog
+                        Comment
+                            Create
+                            Edit
+                            Delete
+
+
+        [ReUI-Widget-Content-Markdown]
+
+            Markdown->new(file => ...);
+            my $mkd = Markdown->new(
+                markdown        => $body,
+                link_callbacks  => {
+                    dist => fun ($uri, $name) {
+                        return URI->new("http://search.cpan.org/dist/$name");
+                    },
+                    _    => fun ($uri) {
+                        return URI->new($uri);
+                    },
+                },
+            );
+
+            ReUI
+                Widget
+                    Content
+                        Markdown
+
+
+        [ReUI-Widget-Table]
+
+            ReUI
+                Widget
+                    Table
+                        CRUD
+                        Row
+                            Head
+                            Body
+                            Foot
+
+
+        [ReUI-Reflector-DBIC]
+
+            ReUI
+                Reflector
+                    DBIC
+                        Form
+                            Create
+                            Update
+                        Table
+
+
+        [ReUI-Widget-Pager]
+
+            my $rs = get_rs();
+            my $pager = ReUI::Widget::Pager->new(
+                name        => 'some_pager',
+                total_pages => $total,
+            );
+            my $page = $pager->page_in($state);
+            my $paged = $rs->page($page);
+            $page->add(...) for $paged->all;
+
+            ReUI
+                Widget
+                    Pager
+
+
+        [ReUI-Navigation]
+
+            my $model = ReUI::Model::Navigation->new(
+                nodes => [
+                    {   name    => 'home',
+                        uri     => sub { ... },
+                    },
+                    {   name    => 'archive',
+                        nodes   => [
+                            {   name    => 2009,
+                                uri     => sub { ... },
+                            },
+                        ],
+                    },
+                ],
+            );
+            my $trail = $model->trail('archive');
+            $trail->into(2009);
+            $trail->into({ label => 'Dynamic Part', uri => $uri });
+            $trail->current;
+            $trail->root;
+            $page->add(R:W:Navigation::Trail->new(
+                trail   => $trail,
+            ));
+            $page->add(R:W:Navigation::SingleLevel->new(
+                model   => $trail->current->parent,
+            ));
+            $page->add(R:W:Navigation::Tree->new(
+                trail   => $trail,
+                levels  => 5,           # topmost, -5 for bottom
+                expand  => 'trail',     # trail, current, all, none, fun ($node) { 1 || 0 }
+            ));
+
+            ReUI
+                Model
+                    Navigation
+                        Trail
+                Widget
+                    Navigation
+                        SingleLevel
+                        Tree
+                        Trail
+
+
+
+
+
+
